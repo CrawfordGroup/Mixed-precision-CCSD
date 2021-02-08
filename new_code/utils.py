@@ -139,7 +139,7 @@ class helper_diis(object):
         self.diis_size = len(self.diis_vals_t1) - 1
 
         # Build error matrix B
-        B = np.ones((self.diis_size + 1, self.diis_size + 1)) * -1 + 0.0j
+        B = np.ones((self.diis_size + 1, self.diis_size + 1)) * -1 
         B[-1, -1] = 0
 
         for n1, e1 in enumerate(self.diis_errors):
