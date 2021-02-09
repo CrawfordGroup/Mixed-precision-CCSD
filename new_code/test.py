@@ -8,6 +8,7 @@
 import psi4
 from psi4 import constants as pc
 import numpy as np
+from ccenergy_dp import ccEnergy_dp
 from ccenergy import ccEnergy
 from cclambda import ccLambda
 from ccpert import CCPert, CCLinresp
@@ -208,22 +209,38 @@ psi4.set_options({'basis': '3-21g',
                   'scf_type': 'pk',
                   'mp2_type': 'conv',
                   'freeze_core': 'false',
-                  'e_convergence': 1e-6,
-                  'd_convergence': 1e-6})
+                  'e_convergence': 1e-10,
+                  'd_convergence': 1e-10,
+                  'diis': 1})
 
 # CCSD Settings
-
+## Precision (0 for double-precision; 1 for mixed-precision)
+precision = 0
 print_amps = False
 
 # RHF from Psi4
 rhf_e, rhf_wfn = psi4.energy('SCF', return_wfn=True)
 
 # Energy
-ccsd = ccEnergy(mol, rhf_e, rhf_wfn, numpy_memory = 2)
-ccsd_corr_e = ccsd.compute_energy(e_conv=1e-6,
-                       r_conv=1e-4,
+if precision == 0:
+    ccsd = ccEnergy_dp(mol, rhf_e, rhf_wfn, numpy_memory = 2)
+elif precision == 1:
+    ccsd = ccEnergy(mol, rhf_e, rhf_wfn, numpy_memory=2)
+else:
+    print("Please check the input of precision!")
+    
+ccsd_corr_e = ccsd.compute_energy(e_conv=1e-7,
+                       r_conv=1e-7,
                        maxiter=50,
                        max_diis=8,
-                       start_diis=1)
+                       start_diis=100)
 print(ccsd_corr_e, ccsd_corr_e + ccsd.SCF_E)
 psi4.compare_values(psi4.energy('CCSD'), ccsd_corr_e + ccsd.SCF_E, 6, 'CCSD Energy')
+
+# Some energy values from Psi4
+#7h2o, 3-21g
+#psi4.compare_values(-530.2299494434577, ccsd_corr_e + ccsd.SCF_E, 6, 'CCSD Energy')
+#6-31g
+#psi4.compare_values(-532.978862007108, ccsd_corr_e + ccsd.SCF_E, 6, 'CCSD Energy')
+#631g*
+#psi4.compare_values(-533.578062728424584, ccsd_corr_e + ccsd.SCF_E, 6, 'CCSD Energy')
