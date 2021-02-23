@@ -6,7 +6,7 @@ import numpy as np
 from utils import ndot
 from opt_einsum import contract
 from utils import helper_diis
-from cchbar import *
+
 np.set_printoptions(precision=5, linewidth=200, threshold=200, suppress=True)
 
 class ccLambda_sp(object):
