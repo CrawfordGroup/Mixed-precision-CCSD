@@ -320,7 +320,7 @@ symmetry c1
 
 # setting up SCF options
 psi4.set_options({
-    'basis': 'sto-3g',
+    'basis': '3-21g',
     'scf_type': 'PK',
     'd_convergence': 1e-10,
     'e_convergence': 1e-10,
