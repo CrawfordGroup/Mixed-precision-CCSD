@@ -275,50 +275,49 @@ symmetry c1
 #)
 
 # (S)-methyloxirane:
-#mol = psi4.geometry(
-"""
- zmat = (
- C
- C 1 B1
- O 2 B2 1 A1
- H 2 B3 1 A2 3 D1
- H 2 B4 1 A3 3 D2
- H 1 B5 2 A4 3 D3
- C 1 B6 2 A5 3 D4
- H 7 B7 1 A6 2 D5
- H 7 B8 1 A7 2 D6
- H 7 B9 1 A8 2 D7
-  )
-  zvars = (
- A1 59.24053923
- A2 119.43315591
- A3 120.16908378
- A4 117.21842257
- A5 122.37833117
- A6 110.6489744
- A7 110.71820821
- A8 110.62534492
- D1 -103.61051046
- D2 103.47749463
- D3 -102.30478838
- D4 103.75862518
- D5 -24.51750626
- D6 96.01547667
- D7 -144.34513611
- B1 1.47013445
- B2 1.43318871
- B3 1.0909973
- B4 1.09072868
- B5 1.09287012
- B6 1.50793568
- B7 1.09469424
- B8 1.09673641
- B9 1.09609604
-  )
-symmetry c1
-"""
-#)
+A1 = 59.24053923
+A2 = 119.43315591
+A3 = 120.16908378
+A4 = 117.21842257
+A5 = 122.37833117
+A6 = 110.6489744
+A7 = 110.71820821
+A8 = 110.62534492
+D1 = -103.61051046
+D2 = 103.47749463
+D3 = -102.30478838
+D4 = 103.75862518
+D5 = -24.51750626
+D6 = 96.01547667
+D7 = -144.34513611
+B1 = 1.47013445
+B2 = 1.43318871
+B3 = 1.0909973
+B4 = 1.09072868
+B5 = 1.09287012
+B6 = 1.50793568
+B7 = 1.09469424
+B8 = 1.09673641
+B9 = 1.09609604
 
+mol = psi4.geometry(
+"""
+0 1
+C
+C 1  {8}
+O 2  {9} 1 {0}
+H 2 {10} 1 {1} 3 {17}
+H 2 {11} 1 {2} 3 {18}
+H 1 {12} 2 {3} 3 {19}
+C 1 {13} 2 {4} 3 {20}
+H 7 {14} 1 {5} 2 {21}
+H 7 {15} 1 {6} 2 {22}
+H 7 {16} 1 {7} 2 {23} 
+symmetry c1
+""".format(A1, A2, A3, A4, A5, A6, A7, A8,
+           B1, B2, B3, B4, B5, B6, B7, B8, B9,
+           D1, D2, D3, D4, D5, D6, D7)
+)
 
 # setting up SCF options
 psi4.set_options({
@@ -624,6 +623,7 @@ psi4.set_options({'d_convergence': 1e-10,
 psi4.properties('ccsd', properties=['rotation'])
 print("LEN(Psi4, python):", psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), specific_rotation_lg)
 print("MVG(Psi4, python): ", psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), specific_rotation_mvg)
+
 #psi4.compare_values(specific_rotation_lg, psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), \
 # 5, "CCSD SPECIFIC ROTATION (LENGTH GAUGE) 589 nm") #TEST
 #psi4.compare_values(specific_rotation_mvg, psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), \

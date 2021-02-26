@@ -222,7 +222,7 @@ symmetry c1
 
 # Chiral molecules
 # (S)-1,3-dimethylallene
-mol = psi4.geometry(
+#mol = psi4.geometry(
 """
 C  0.000000  0.000000  0.414669
 C  0.000000  1.309935  0.412904
@@ -239,7 +239,7 @@ H  1.514280  2.829499  0.150828
 H -1.514280 -2.829499  0.150828
 symmetry c1
 """
-)
+#)
 
 # (S)-2-chloropropionitrile
 #mol = psi4.geometry(
@@ -275,49 +275,49 @@ symmetry c1
 #)
 
 # (S)-methyloxirane:
-#mol = psi4.geometry(
+A1 = 59.24053923
+A2 = 119.43315591
+A3 = 120.16908378
+A4 = 117.21842257
+A5 = 122.37833117
+A6 = 110.6489744
+A7 = 110.71820821
+A8 = 110.62534492
+D1 = -103.61051046
+D2 = 103.47749463
+D3 = -102.30478838
+D4 = 103.75862518
+D5 = -24.51750626
+D6 = 96.01547667
+D7 = -144.34513611
+B1 = 1.47013445
+B2 = 1.43318871
+B3 = 1.0909973
+B4 = 1.09072868
+B5 = 1.09287012
+B6 = 1.50793568
+B7 = 1.09469424
+B8 = 1.09673641
+B9 = 1.09609604
+
+mol = psi4.geometry(
 """
- zmat = (
- C
- C 1 B1
- O 2 B2 1 A1
- H 2 B3 1 A2 3 D1
- H 2 B4 1 A3 3 D2
- H 1 B5 2 A4 3 D3
- C 1 B6 2 A5 3 D4
- H 7 B7 1 A6 2 D5
- H 7 B8 1 A7 2 D6
- H 7 B9 1 A8 2 D7
-  )
-  zvars = (
- A1 59.24053923
- A2 119.43315591
- A3 120.16908378
- A4 117.21842257
- A5 122.37833117
- A6 110.6489744
- A7 110.71820821
- A8 110.62534492
- D1 -103.61051046
- D2 103.47749463
- D3 -102.30478838
- D4 103.75862518
- D5 -24.51750626
- D6 96.01547667
- D7 -144.34513611
- B1 1.47013445
- B2 1.43318871
- B3 1.0909973
- B4 1.09072868
- B5 1.09287012
- B6 1.50793568
- B7 1.09469424
- B8 1.09673641
- B9 1.09609604
-  )
+0 1
+C
+C 1  {8}
+O 2  {9} 1 {0}
+H 2 {10} 1 {1} 3 {17}
+H 2 {11} 1 {2} 3 {18}
+H 1 {12} 2 {3} 3 {19}
+C 1 {13} 2 {4} 3 {20}
+H 7 {14} 1 {5} 2 {21}
+H 7 {15} 1 {6} 2 {22}
+H 7 {16} 1 {7} 2 {23} 
 symmetry c1
-"""
-#)
+""".format(A1, A2, A3, A4, A5, A6, A7, A8,
+           B1, B2, B3, B4, B5, B6, B7, B8, B9,
+           D1, D2, D3, D4, D5, D6, D7)
+)
 
 
 # setting up SCF options
@@ -399,22 +399,22 @@ for i in range(0, 3):
     print(
         '\nsolving right hand perturbed amplitudes for %s @ omega = %s a.u.\n'
         % (Mu, Om))
-    ccpert[Mu + Om].solve('right', r_conv=1e-10)
+    ccpert[Mu + Om].solve('right', r_conv=1e-7)
 
     print(
         '\nsolving left hand perturbed amplitudes for %s @ omega = %s a.u.\n' %
         (Mu, Om))
-    ccpert[Mu + Om].solve('left', r_conv=1e-10)
+    ccpert[Mu + Om].solve('left', r_conv=1e-7)
 
     print(
         '\nsolving right hand perturbed amplitudes for %s @ omega = %s a.u.\n'
         % (L, Om))
-    ccpert[L + Om].solve('right', r_conv=1e-10)
+    ccpert[L + Om].solve('right', r_conv=1e-7)
 
     print(
         '\nsolving left hand perturbed amplitudes for %s @ omega = %s a.u.\n' %
         (L, Om))
-    ccpert[L + Om].solve('left', r_conv=1e-10)
+    ccpert[L + Om].solve('left', r_conv=1e-7)
 
 for A in range(0, 3):
     str_A = "MU_" + cart[A]
@@ -490,12 +490,12 @@ for i in range(0, 3):
     print(
         '\nsolving right hand perturbed amplitudes for %s @ omega = %s a.u.\n'
         % (P, Om))
-    ccpert[P + Om].solve('right', r_conv=1e-10)
+    ccpert[P + Om].solve('right', r_conv=1e-7)
 
     print(
         '\nsolving left hand perturbed amplitudes for %s @ omega = %s a.u.\n' %
         (P, Om))
-    ccpert[P + Om].solve('left', r_conv=1e-10)
+    ccpert[P + Om].solve('left', r_conv=1e-7)
 
 for A in range(0, 3):
     str_A = "P_" + cart[A]
@@ -557,22 +557,22 @@ for i in range(0, 3):
     print(
         '\nsolving right hand perturbed amplitudes for %s @ omega = %s (a.u.)\n'
         % (L, Om_0))
-    ccpert[L + Om_0].solve('right', r_conv=1e-10)
+    ccpert[L + Om_0].solve('right', r_conv=1e-7)
 
     print(
         '\nsolving left hand perturbed amplitudes for %s @ omega = %s (a.u.)\n'
         % (L, Om_0))
-    ccpert[L + Om_0].solve('left', r_conv=1e-10)
+    ccpert[L + Om_0].solve('left', r_conv=1e-7)
 
     print(
         '\nsolving right hand perturbed amplitudes for %s @ omega = %s (a.u.)\n'
         % (P, Om_0))
-    ccpert[P + Om_0].solve('right', r_conv=1e-10)
+    ccpert[P + Om_0].solve('right', r_conv=1e-7)
 
     print(
         '\nsolving left hand perturbed amplitudes for %s @ omega = %s (a.u.)\n'
         % (P, Om_0))
-    ccpert[P + Om_0].solve('left', r_conv=1e-10)
+    ccpert[P + Om_0].solve('left', r_conv=1e-7)
 
 for A in range(0, 3):
     str_A = "P_" + cart[A]
@@ -615,16 +615,20 @@ print(
     % (omega_nm, specific_rotation_mvg))
 
 #  Comaprison with PSI4 (if you have near to latest version of psi4)
+print("Comparison with PSI4: ")
 psi4.set_options({'d_convergence': 1e-10,
                   'e_convergence': 1e-10,
                   'r_convergence': 1e-10,
                   'omega': [589, 'nm'],  
                   'gauge': 'both'})  
 psi4.properties('ccsd', properties=['rotation'])
-psi4.compare_values(specific_rotation_lg, psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), \
- 5, "CCSD SPECIFIC ROTATION (LENGTH GAUGE) 589 nm") #TEST
-psi4.compare_values(specific_rotation_mvg, psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), \
-  5, "CCSD SPECIFIC ROTATION (MODIFIED VELOCITY GAUGE) 589 nm") #TEST
+print("LEN(Psi4, python):", psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), specific_rotation_lg)
+print("MVG(Psi4, python): ", psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), specific_rotation_mvg)
+
+#psi4.compare_values(specific_rotation_lg, psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), \
+# 5, "CCSD SPECIFIC ROTATION (LENGTH GAUGE) 589 nm") #TEST
+#psi4.compare_values(specific_rotation_mvg, psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), \
+#  5, "CCSD SPECIFIC ROTATION (MODIFIED VELOCITY GAUGE) 589 nm") #TEST
 
 """
 psi4.compare_values(specific_rotation_lg, 7.03123, 5,
