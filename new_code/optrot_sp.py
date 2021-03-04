@@ -623,8 +623,9 @@ print(
 #print(rmvg_au)
 
 #  Comaprison with PSI4 (if you have near to latest version of psi4)
-print(specific_rotation_lg)
-print(specific_rotation_mvg)
+print("specific_rotation_lg = ", specific_rotation_lg)
+print("specific_rotation_mvg = ", specific_rotation_mvg)
+
 """
 print("Comparison with PSI4: ")
 psi4.set_options({'d_convergence': 1e-10,
