@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+# Single-precision
+
 """
 A simple python script to calculate RHF-CCSD specific rotation in length,
 velocity and modified velocity gauge using coupled cluster linear response theory.
@@ -614,6 +617,10 @@ specific_rotation_mvg = prefactor * rmvg_au / Mass
 print(
     "Specific rotation @ %d nm (Modified Velocity Gauge): %10.5lf deg/[dm (g/cm^3)]"
     % (omega_nm, specific_rotation_mvg))
+
+## the trace of Rosenfeld beta tensor in au
+#print(rlg_au)
+#print(rmvg_au)
 
 #  Comaprison with PSI4 (if you have near to latest version of psi4)
 print(specific_rotation_lg)
