@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+# Mixed-precision
+
 """
 A simple python script to calculate RHF-CCSD specific rotation in length,
 velocity and modified velocity gauge using coupled cluster linear response theory.
@@ -612,7 +615,14 @@ print(
     "Specific rotation @ %d nm (Modified Velocity Gauge): %10.5lf deg/[dm (g/cm^3)]"
     % (omega_nm, specific_rotation_mvg))
 
+## the trace of Rosenfeld beta tensor in au
+#print(rlg_au)
+#print(rmvg_au)
+
 #  Comaprison with PSI4 (if you have near to latest version of psi4)
+print("specific_rotation_lg = ", specific_rotation_lg)
+print("specific_rotation_mvg = ", specific_rotation_mvg)
+"""
 print("Comparison with PSI4: ")
 psi4.set_options({'d_convergence': 1e-10,
                   'e_convergence': 1e-10,
@@ -622,7 +632,7 @@ psi4.set_options({'d_convergence': 1e-10,
 psi4.properties('ccsd', properties=['rotation'])
 print("LEN(Psi4, python):", psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), specific_rotation_lg)
 print("MVG(Psi4, python): ", psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), specific_rotation_mvg)
-
+"""
 #psi4.compare_values(specific_rotation_lg, psi4.variable("CCSD SPECIFIC ROTATION (LEN) @ 589NM"), \
 # 5, "CCSD SPECIFIC ROTATION (LENGTH GAUGE) 589 nm") #TEST
 #psi4.compare_values(specific_rotation_mvg, psi4.variable("CCSD SPECIFIC ROTATION (MVG) @ 589NM"), \
