@@ -786,8 +786,8 @@ class CCPert(object):
         else:
             diis_object = helper_diis(self.y1, self.y2, max_diis)
             # calculate the inhomogenous terms of the left hand amplitudes equation before iterations begin
-            self.im_y1 = self.inhomogenous_y1_dp()
-            self.im_y2 = self.inhomogenous_y2_dp()
+            self.im_y1 = self.inhomogenous_y1()
+            self.im_y2 = self.inhomogenous_y2()
 
         # Iterate!
         for CCPERT_iter in range(1, maxiter + 1):
