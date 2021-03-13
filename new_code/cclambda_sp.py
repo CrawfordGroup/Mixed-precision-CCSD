@@ -6,7 +6,6 @@ import numpy as np
 from utils import ndot
 from opt_einsum import contract
 from utils import helper_diis
-
 np.set_printoptions(precision=5, linewidth=200, threshold=200, suppress=True)
 
 class ccLambda_sp(object):
@@ -312,8 +311,8 @@ class ccLambda_sp(object):
         return r_l2
 
     def update_l(self):
-        old_l2 = self.l2.copy()
-        old_l1 = self.l1.copy()
+        old_l2 = self.l2_sp.copy()
+        old_l1 = self.l1_sp.copy()
 
         rl1 = self.r_l1(self.Fsp, self.t1_sp, self.t2_sp, self.l1_sp, self.l2_sp)
         rl2 = self.r_l2(self.Fsp, self.t1_sp, self.t2_sp, self.l1_sp, self.l2_sp)
@@ -322,12 +321,11 @@ class ccLambda_sp(object):
         # Final r_l2_ijab = r_l2_ijab + r_l2_jiba
         tmp = np.float64(rl2) / self.Dijab
         self.l2 += tmp + tmp.swapaxes(0, 1).swapaxes(2, 3)
-        # update single-precision l1, l2
         self.l1_sp = np.float32(self.l1)
         self.l2_sp = np.float32(self.l2)
         # calculate rms from the residual
-        rms = 2.0 * np.einsum('ia,ia->', old_l1 - self.l1, old_l1 - self.l1)
-        rms += np.einsum('ijab,ijab->', old_l2 - self.l2, old_l2 - self.l2)
+        rms = 2.0 * np.einsum('ia,ia->', old_l1 - self.l1_sp, old_l1 - self.l1_sp)
+        rms += np.einsum('ijab,ijab->', old_l2 - self.l2_sp, old_l2 - self.l2_sp)
         return np.sqrt(rms)
 
     def pseudoenergy(self, l2):
@@ -347,6 +345,7 @@ class ccLambda_sp(object):
         pseudoenergy_old = self.pseudoenergy(self.l2)
         print(
             "CCLAMBDA Iteration %3d: pseudoenergy = %.15f   dE = % .5E" % (0, np.real(pseudoenergy_old), np.real(-pseudoenergy_old)))
+        #pseudoenergy_old = np.float32(pseudoenergy_old)
 
         # Set up DIIS before iterations begin
         diis_object = helper_diis(self.l1, self.l2, max_diis)
@@ -359,16 +358,20 @@ class ccLambda_sp(object):
 
             # Print CCLAMBDA iteration information
             print('CCLAMBDA Iteration %3d: pseudoenergy = %.15f   dE = % .5E   DIIS = %d'
-                  % (CCLAMBDA_iter, np.real(pseudo_energy),
-                     np.real(pseudo_energy - pseudoenergy_old), diis_object.diis_size))
+                  % (CCLAMBDA_iter, pseudo_energy,
+                     pseudo_energy - pseudoenergy_old, diis_object.diis_size))
 
             # Check convergence
-            if (rms_l < r_conv):
+            if (abs(pseudo_energy - pseudoenergy_old) < e_conv and rms_l < r_conv):
+                #self.l1 = np.float64(self.l1_sp)
+                #self.l2 = np.float64(self.l2_sp)
                 print('\nCCLAMBDA has converged in %.3f seconds!' % (time.time() - cclambda_tstart))
                 return pseudo_energy
 
             # Update old pseudoenergy
             pseudoenergy_old = pseudo_energy
+            self.l1 = np.float64(self.l1_sp)
+            self.l2 = np.float64(self.l2_sp)
 
             #  Add the new error vector
             diis_object.add_error_vector(self.l1, self.l2)

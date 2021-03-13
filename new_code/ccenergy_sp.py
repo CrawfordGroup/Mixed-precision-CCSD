@@ -74,8 +74,8 @@ class ccEnergy_sp(object):
         self.P = self.get_P()
 
         # Occupied and Virtual orbital energies for the denominators
-        Focc = np.diag(self.F)[self.slice_o]
-        Fvir = np.diag(self.F)[self.slice_v]
+        Focc = np.diag(self.Fsp)[self.slice_o]
+        Fvir = np.diag(self.Fsp)[self.slice_v]
 
         # Denominator
         self.Dia = Focc.reshape(-1, 1) - Fvir
@@ -90,6 +90,7 @@ class ccEnergy_sp(object):
         # single-precision t1, t2
         self.t1_sp = np.float32(self.t1)
         self.t2_sp = np.float32(self.t2)
+
 
         print('\n..initialized CCSD in %.3f seconds.\n' % (time.time() - time_init))
 
@@ -226,10 +227,6 @@ class ccEnergy_sp(object):
 
         return r_T1
 
-    def RHS_1(self, F, t1, t2):
-        r1 = self.r_T1(F, t1, t2)
-        return (r1 - t1 * self.Dia) * (-1.0j)
-
     def r_T2(self, F, t1, t2):
         Fae = self.build_Fae(F, t1, t2)
         Fme = self.build_Fme(F, t1)
@@ -332,32 +329,26 @@ class ccEnergy_sp(object):
 
         return r_T2
 
-    def RHS_2(self, F, t1, t2):
-        r2 = self.r_T2(F, t1, t2)
-        return (r2 - t2 * self.Dijab) * (-1.0j)
 
     # Compute the ground state t-amplitudes for the start point (t=0)
     def update(self):
         ### Update T1 and T2 amplitudes
         r1 = self.r_T1(self.Fsp, self.t1_sp, self.t2_sp)
         r2 = self.r_T2(self.Fsp, self.t1_sp, self.t2_sp)
-        self.t1 += np.float64(r1) / self.Dia
-        self.t2 += np.float64(r2) / self.Dijab
 
-        self.t1_sp = np.float32(self.t1)
-        self.t2_sp = np.float32(self.t2)
+        self.t1_sp += r1 / self.Dia
+        self.t2_sp += r2 / self.Dijab
 
         rms = np.einsum('ia,ia->', r1 / self.Dia, r1 / self.Dia)
         rms += np.einsum('ijab,ijab->', r2 / self.Dijab, r2 / self.Dijab)
 
         return np.sqrt(rms)
 
-    # Compute energy, needed in the propagation
     def compute_corr_energy(self, F, t1, t2):
         CCSDcorr_E = 2.0 * np.einsum('ia,ia->', self.get_F(F, 'ov'), t1)
         tmp_tau = self.build_tau(t1, t2)
-        CCSDcorr_E += 2.0 * np.einsum('ijab,ijab->', tmp_tau, self.get_MO('oovv'))
-        CCSDcorr_E -= 1.0 * np.einsum('ijab,ijba->', tmp_tau, self.get_MO('oovv'))
+        CCSDcorr_E += 2.0 * np.einsum('ijab,ijab->', tmp_tau, self.get_MO_sp('oovv'))
+        CCSDcorr_E -= 1.0 * np.einsum('ijab,ijba->', tmp_tau, self.get_MO_sp('oovv'))
 
         return CCSDcorr_E
 
@@ -370,10 +361,10 @@ class ccEnergy_sp(object):
 
         ### Start Iterations
         ccsd_tstart = time.time()
-        # Compute MP2 energy
+        # Compute MP2 energy (dp)
         CCSDcorr_E_old = self.compute_corr_energy(self.F, self.t1, self.t2)
         print("CCSD Iteration %3d: CCSD correlation = %.15f   dE = % .5E   MP2" % (0, CCSDcorr_E_old, -CCSDcorr_E_old))
-
+        CCSDcorr_E_old = np.float32(CCSDcorr_E_old)
         # Set up DIIS before iterations begin
         diis_object = helper_diis(self.t1, self.t2, max_diis)
 
@@ -383,7 +374,7 @@ class ccEnergy_sp(object):
             rms = self.update()
 
             # Compute CCSD correlation energy
-            CCSDcorr_E = self.compute_corr_energy(self.F, self.t1, self.t2)
+            CCSDcorr_E = self.compute_corr_energy(self.Fsp, self.t1_sp, self.t2_sp)
 
             # Print CCSD iteration information
             print('CCSD Iteration %3d: CCSD correlation = %.15f   dE = % .5E   DIIS = %d' % (
@@ -391,12 +382,16 @@ class ccEnergy_sp(object):
 
             # Check convergence
             if (abs(CCSDcorr_E - CCSDcorr_E_old) < e_conv and rms < r_conv):
+                self.t1 = np.float64(self.t1_sp)
+                self.t2 = np.float64(self.t2_sp)
                 print('\nCCSD has converged in %.3f seconds!' % (time.time() - ccsd_tstart))
                 return CCSDcorr_E
                 # return t1_init
 
             # Update old energy
             CCSDcorr_E_old = CCSDcorr_E
+            self.t1 = np.float64(self.t1_sp)
+            self.t2 = np.float64(self.t2_sp)
 
             #  Add the new error vector
             diis_object.add_error_vector(self.t1, self.t2)
