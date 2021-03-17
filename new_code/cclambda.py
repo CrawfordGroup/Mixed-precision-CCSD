@@ -397,6 +397,8 @@ class ccLambda(object):
             diis_object.add_error_vector(self.l1, self.l2)
             if CCLAMBDA_iter >= start_diis:
                 self.l1, self.l2 = diis_object.extrapolate(self.l1, self.l2)
+                self.l1_sp = np.float32(self.l1)
+                self.l2_sp = np.float32(self.l2)
 
 
 

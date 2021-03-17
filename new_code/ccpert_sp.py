@@ -634,9 +634,12 @@ class CCPert_sp(object):
             if CCPERT_iter >= start_diis:
                 if hand == 'right':
                     self.x1, self.x2 = diis_object.extrapolate(self.x1, self.x2)
+                    self.x1_sp = np.float32(self.x1)
+                    self.x2_sp = np.float32(self.x2)
                 else:
                     self.y1, self.y2 = diis_object.extrapolate(self.y1, self.y2)
-
+                    self.y1_sp = np.float32(np.y1)
+                    self.y2_sp = np.float32(np.y2)
 
 # End HelperCCPert class
 
