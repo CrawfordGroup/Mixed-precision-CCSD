@@ -38,7 +38,7 @@ class ccEnergy(object):
 
         print('Starting AO ->  MO transformation...')
 
-        ERI_Size = self.nmo * 128.e-9
+        ERI_Size = (self.nmo**4)*8/(1024**3)
         memory_footprint = ERI_Size * 5
         if memory_footprint > self.memory:
             psi4.clean()
@@ -393,8 +393,8 @@ class ccEnergy(object):
             CCSDcorr_E = self.compute_corr_energy(self.F, self.t1, self.t2)
 
             # Print CCSD iteration information
-            print('CCSD Iteration %3d: CCSD correlation = %.15f   dE = % .5E   DIIS = %d' % (
-            CCSD_iter, CCSDcorr_E, CCSDcorr_E - CCSDcorr_E_old, diis_object.diis_size))
+            print('CCSD Iter %3d: CCSD Ecorr = %.15f  dE = % .5E  rms = % .5E  DIIS = %d' % (
+            CCSD_iter, CCSDcorr_E, CCSDcorr_E - CCSDcorr_E_old, rms, diis_object.diis_size))
 
             # Check convergence
             if (abs(CCSDcorr_E - CCSDcorr_E_old) < e_conv and rms < r_conv):
@@ -410,3 +410,5 @@ class ccEnergy(object):
 
             if CCSD_iter >= start_diis:
                 self.t1, self.t2 = diis_object.extrapolate(self.t1, self.t2)
+                self.t1_sp = np.float32(self.t1);
+                self.t2_sp = np.float32(self.t2);

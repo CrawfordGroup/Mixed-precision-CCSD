@@ -33,13 +33,13 @@ class ccEnergy_sp(object):
 
         print('Starting AO ->  MO transformation...')
 
-        ERI_Size = self.nmo * 128.e-9
+        ERI_Size = (self.nmo**4)*8/(1024**3)
         memory_footprint = ERI_Size * 5
         if memory_footprint > self.memory:
             psi4.clean()
             raise Exception(
                 "Estimated memory utilization (%4.2f GB) exceeds numpy_memory \
-                            limit of %4.2f GB." % (memory_footprint, memory))
+                            limit of %4.2f GB." % (memory_footprint, self.memory))
 
         # Integral generation from Psi4's MintsHelper
         self.MO = np.asarray(self.mints.mo_eri(self.C, self.C, self.C, self.C))
@@ -377,8 +377,8 @@ class ccEnergy_sp(object):
             CCSDcorr_E = self.compute_corr_energy(self.Fsp, self.t1_sp, self.t2_sp)
 
             # Print CCSD iteration information
-            print('CCSD Iteration %3d: CCSD correlation = %.15f   dE = % .5E   DIIS = %d' % (
-            CCSD_iter, CCSDcorr_E, CCSDcorr_E - CCSDcorr_E_old, diis_object.diis_size))
+            print('CCSD Iter %3d: CCSD Ecorr = %.15f  dE = % .5E  rms = % .5E  DIIS = %d' % (
+            CCSD_iter, CCSDcorr_E, CCSDcorr_E - CCSDcorr_E_old, rms, diis_object.diis_size))
 
             # Check convergence
             if (abs(CCSDcorr_E - CCSDcorr_E_old) < e_conv and rms < r_conv):
@@ -398,3 +398,6 @@ class ccEnergy_sp(object):
 
             if CCSD_iter >= start_diis:
                 self.t1, self.t2 = diis_object.extrapolate(self.t1, self.t2)
+                self.t1_sp = np.float32(self.t1);
+                self.t2_sp = np.float32(self.t2);
+
