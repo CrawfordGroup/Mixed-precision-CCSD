@@ -398,6 +398,5 @@ class ccEnergy_sp(object):
 
             if CCSD_iter >= start_diis:
                 self.t1, self.t2 = diis_object.extrapolate(self.t1, self.t2)
-                self.t1_sp = np.float32(self.t1);
-                self.t2_sp = np.float32(self.t2);
-
+                self.t1_sp = np.float32(self.t1)
+                self.t2_sp = np.float32(self.t2)
