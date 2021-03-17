@@ -130,13 +130,16 @@ class helper_diis(object):
 
     def extrapolate(self, t1, t2):
 
+        if (self.max_diis == 0):
+            return t1, t2
+
         # Limit size of DIIS vector
-        if (len(self.diis_vals_t1) > self.max_diis):
+        if (len(self.diis_errors) > self.max_diis):
             del self.diis_vals_t1[0]
             del self.diis_vals_t2[0]
             del self.diis_errors[0]
 
-        self.diis_size = len(self.diis_vals_t1) - 1
+        self.diis_size = len(self.diis_errors)
 
         # Build error matrix B
         B = np.ones((self.diis_size + 1, self.diis_size + 1)) * -1 
