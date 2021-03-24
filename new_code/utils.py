@@ -173,3 +173,18 @@ class helper_diis(object):
         self.oldt2 = t2.copy()
 
         return t1, t2
+
+def careful_sum(terms, precision):
+    if precision == "single":
+        prec='float32'
+    elif precision == "double" or precision == "mixed":
+        prec='float64'
+
+    res = np.zeros_like(terms[0], dtype=prec)
+    for arr in terms:
+        if precision == "mixed": # cast each term to float64 before summing
+            arr = arr.astype(prec)
+        res = np.add(res, arr, dtype=prec)
+
+    return res
+
