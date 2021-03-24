@@ -3,23 +3,24 @@ import time
 import numpy as np
 from utils import ndot
 from utils import helper_diis
+from utils import careful_sum
 np.set_printoptions(precision=5, linewidth=200, threshold=200, suppress=True)
 
-def careful_sum(terms, precision):
-    if precision == "single":
-        prec='float32'
-    elif precision == "double" or precision == "mixed":
-        prec='float64'
-
-    res = np.zeros_like(terms[0], dtype=prec)
-    for arr in terms:
-        if precision == "mixed": # cast each term to float64 before summing
-            arr = arr.astype(prec)
-        res = np.add(res, arr, dtype=prec)
-
-    return res
-
 class ccEnergy(object):
+
+    def get_ERI(self, ERI, string):
+        if len(string) != 4:
+            psi4.core.clean()
+            raise Exception('get_ERI: string %s must have 4 elements.' % string)
+        return ERI[self.slice_dict[string[0]], self.slice_dict[string[1]],
+                  self.slice_dict[string[2]], self.slice_dict[string[3]]]
+
+    def get_F(self, F, string):
+        if len(string) != 2:
+            psi4.core.clean()
+            raise Exception('get_F: string %s must have 4 elements.' % string)
+        return F[self.slice_dict[string[0]], self.slice_dict[string[1]]]
+
     def __init__(self, mol, scf_wfn, precision="double", memory=2):
         print("\nInitalizing CCSD object...\n")
         time_init = time.time()
@@ -59,21 +60,6 @@ class ccEnergy(object):
         self.ERI = self.ERI.swapaxes(1, 2)
         self.L = 2.0 * self.ERI - self.ERI.swapaxes(2, 3)
 
-        if precision != "double" and precision != "single" and precision != "mixed":
-            raise Exception("Unknown option for precision:", precision)
-        self.precision = precision
-        print("Using %s precision." % precision)
-
-        if self.precision=="mixed":
-            self.F64 = self.F.copy()
-            self.L64 = self.L.copy()
-            self.ERI64 = self.ERI.copy()
-
-        if self.precision == "single" or self.precision == "mixed":
-            self.ERI = np.float32(self.ERI)
-            self.L = np.float32(self.L)
-            self.F = np.float32(self.F)
-
         # Make slices
         self.slice_o = slice(0, self.nocc)
         self.slice_v = slice(self.nocc, self.nmo)
@@ -84,8 +70,23 @@ class ccEnergy(object):
             'a': self.slice_a
         }
 
+        if precision != "double" and precision != "single" and precision != "mixed":
+            raise Exception("Unknown option for precision:", precision)
+        self.precision = precision
+        print("Using %s precision." % precision)
+
+        if self.precision=="mixed": # keep a copy of the float64 ints
+            self.F64 = self.F.copy()
+            self.L64 = self.L.copy()
+            self.ERI64 = self.get_ERI(self.ERI, 'oovv').copy()
+
+        if self.precision == "single" or self.precision == "mixed":
+            self.F = np.float32(self.F)
+            self.L = np.float32(self.L)
+            self.ERI = np.float32(self.ERI)
+
         # Occupied and Virtual orbital energies for the denominators
-        if self.precision == "mixed": # use doubles so we don't lose precision in each iteration
+        if self.precision == "mixed": # keep denominators float64
             Focc = np.diag(self.F64)[self.slice_o]
             Fvir = np.diag(self.F64)[self.slice_v]
         else:
@@ -96,33 +97,19 @@ class ccEnergy(object):
         self.Dia = Focc.reshape(-1, 1) - Fvir
         self.Dijab = Focc.reshape(-1, 1, 1, 1) + Focc.reshape(-1, 1, 1) - Fvir.reshape(-1, 1) - Fvir
 
-        # Construct initial guess of t1, t2 (t1, t2 at t=0)
         print('Building initial guess...')
-        # t^a_i
-        if precision == "mixed" or precision == "single":
+
+        if self.precision == "single":
             self.t1 = np.zeros((self.nocc, self.nvirt), dtype='float32')
         else:
-            self.t1 = np.zeros((self.nocc, self.nvirt))
-        # t^{ab}_{ij}
-        if precision == "mixed":
-            self.t2 = np.float32(self.ERI64[self.slice_o, self.slice_o, self.slice_v, self.slice_v] / self.Dijab)
+            self.t1 = np.zeros((self.nocc, self.nvirt)) # gives float64 by default
+
+        if self.precision == "mixed": # default to float64 to start
+            self.t2 = self.ERI64 / self.Dijab
         else:
-            self.t2 = self.ERI[self.slice_o, self.slice_o, self.slice_v, self.slice_v] / self.Dijab
+            self.t2 = self.get_ERI(self.ERI, 'oovv') / self.Dijab
 
         print('\n..initialized CCSD in %.3f seconds.\n' % (time.time() - time_init))
-
-    def get_ERI(self, ERI, string):
-        if len(string) != 4:
-            psi4.core.clean()
-            raise Exception('get_ERI: string %s must have 4 elements.' % string)
-        return ERI[self.slice_dict[string[0]], self.slice_dict[string[1]],
-                  self.slice_dict[string[2]], self.slice_dict[string[3]]]
-
-    def get_F(self, F, string):
-        if len(string) != 2:
-            psi4.core.clean()
-            raise Exception('get_F: string %s must have 4 elements.' % string)
-        return F[self.slice_dict[string[0]], self.slice_dict[string[1]]]
 
     # Equations from Reference 1 (Stanton's paper)
 
@@ -224,16 +211,7 @@ class ccEnergy(object):
 
         return Zmbij
 
-    def r_T1(self, F, ERI, L, t1, t2):
-        if self.precision == "single" or self.precision == "mixed":
-            Fae = np.float32(self.build_Fae(F, L, t1, t2))
-            Fme = np.float32(self.build_Fme(F, L, t1))
-            Fmi = np.float32(self.build_Fmi(F, L, t1, t2))
-        else:
-            Fae = self.build_Fae(F, L, t1, t2)
-            Fme = self.build_Fme(F, L, t1)
-            Fmi = self.build_Fmi(F, L, t1, t2)
-
+    def r_T1(self, F, ERI, L, t1, t2, Fae, Fme, Fmi):
         terms = []
         terms.append(self.get_F(F, 'ov').copy())
         terms.append(ndot('ie,ae->ia', t1, Fae))
@@ -248,27 +226,11 @@ class ccEnergy(object):
 
         return r_T1
 
-    def r_T2(self, F, ERI, L, t1, t2):
-        if self.precision == "single" or self.precision == "mixed":
-            Fae = np.float32(self.build_Fae(F, L, t1, t2))
-            Fme = np.float32(self.build_Fme(F, L, t1))
-            Fmi = np.float32(self.build_Fmi(F, L, t1, t2))
-            Wmnij = np.float32(self.build_Wmnij(ERI, t1, t2))
-            Wmbej = np.float32(self.build_Wmbej(ERI, L, t1, t2))
-            Wmbje = np.float32(self.build_Wmbje(ERI, t1, t2))
-            Zmbij = np.float32(self.build_Zmbij(ERI, t1, t2))
-        else:
-            Fae = self.build_Fae(F, L, t1, t2)
-            Fme = self.build_Fme(F, L, t1)
-            Fmi = self.build_Fmi(F, L, t1, t2)
-            Wmnij = self.build_Wmnij(ERI, t1, t2)
-            Wmbej = self.build_Wmbej(ERI, L, t1, t2)
-            Wmbje = self.build_Wmbje(ERI, t1, t2)
-            Zmbij = self.build_Zmbij(ERI, t1, t2)
+    def r_T2(self, F, ERI, L, t1, t2, Fae, Fme, Fmi, Wmnij, Wmbej, Wmbje, Zmbij):
 
         terms = []
         if self.precision == "mixed":
-            terms.append(0.5 * self.get_ERI(self.ERI64, 'oovv').copy())
+            terms.append(0.5 * self.ERI64)
         else:
             terms.append(0.5 * self.get_ERI(ERI, 'oovv').copy())
         terms.append(ndot('ijae,be->ijab', t2, Fae))
@@ -298,24 +260,9 @@ class ccEnergy(object):
 
         return r_T2
 
-    def update(self):
-        ### Update T1 and T2 amplitudes
-        r1 = self.r_T1(self.F, self.ERI, self.L, self.t1, self.t2)
-        r2 = self.r_T2(self.F, self.ERI, self.L, self.t1, self.t2)
-        self.t1 += np.real(r1) / np.real(self.Dia)
-        self.t2 += np.real(r2) / np.real(self.Dijab)
-
-        rms = np.einsum('ia,ia->', r1 / self.Dia, r1 / self.Dia)
-        rms += np.einsum('ijab,ijab->', r2 / self.Dijab, r2 / self.Dijab)
-
-        return np.sqrt(rms)
-
-    def compute_corr_energy(self, F, L, t1, t2):
-        CCSDcorr_E = 2.0 * np.einsum('ia,ia->', self.get_F(F, 'ov'), t1)
-        tmp_tau = self.build_tau(t1, t2)
-        CCSDcorr_E += np.einsum('ijab,ijab->', tmp_tau, self.get_ERI(L, 'oovv'))
-
-        return CCSDcorr_E
+    # Assumes canonical RHF orbitals
+    def compute_corr_energy(self, L, t1, t2):
+        return np.einsum('ijab,ijab->', self.build_tau(t1, t2), self.get_ERI(L, 'oovv'))
 
     def compute_energy(self,
                        e_conv=1e-7,
@@ -326,11 +273,24 @@ class ccEnergy(object):
 
         ### Start Iterations
         ccsd_tstart = time.time()
-        # Compute MP2 energy
+
+        # Integrals and denominators
+        F = self.F
+        L = self.L
+        ERI = self.ERI
+        Dia = self.Dia
+        Dijab = self.Dijab
         if self.precision == "mixed":
-            CCSDcorr_E_old = self.compute_corr_energy(self.F64, self.L64, self.t1, self.t2)
+            F64 = self.F64
+            L64 = self.L64
+
+        # Compute MP2 energy
+        # This is float64 for mixed- and double-precision; float32 for single
+        if self.precision == "mixed":
+            CCSDcorr_E_old = self.compute_corr_energy(L64, self.t1, self.t2)
         else:
-            CCSDcorr_E_old = self.compute_corr_energy(self.F, self.L, self.t1, self.t2)
+            CCSDcorr_E_old = self.compute_corr_energy(L, self.t1, self.t2)
+
         print("CCSD Iter %3d: CCSD Ecorr = %.15f  dE = % .5E  MP2" % (0, np.real(CCSDcorr_E_old), np.real(-CCSDcorr_E_old)))
 
         # Set up DIIS before iterations begin
@@ -338,15 +298,45 @@ class ccEnergy(object):
 
         # Iterations
         for CCSD_iter in range(1, maxiter + 1):
+            if self.precision == "single" or self.precision == "mixed":
+                t1 = np.float32(self.t1)
+                t2 = np.float32(self.t2)
+            else:
+                t1 = self.t1
+                t2 = self.t2
 
-            rms = self.update()
+            # build intermediates
+            Fae = self.build_Fae(F, L, t1, t2)
+            Fme = self.build_Fme(F, L, t1)
+            Fmi = self.build_Fmi(F, L, t1, t2)
+            Wmnij = self.build_Wmnij(ERI, t1, t2)
+            Wmbej = self.build_Wmbej(ERI, L, t1, t2)
+            Wmbje = self.build_Wmbje(ERI, t1, t2)
+            Zmbij = self.build_Zmbij(ERI, t1, t2)
+            if self.precision == "single" or self.precision == "mixed":
+                Fae = np.float32(Fae)
+                Fme = np.float32(Fme)
+                Fmi = np.float32(Fmi)
+                Wmnij = np.float32(Wmnij)
+                Wmbej = np.float32(Wmbej)
+                Wmbje = np.float32(Wmbje)
+                Zmbij = np.float32(Zmbij)
+
+            # build residuals and update the amplitues
+            r1 = self.r_T1(F, ERI, L, t1, t2, Fae, Fme, Fmi)
+            r2 = self.r_T2(F, ERI, L, t1, t2, Fae, Fme, Fmi, Wmnij, Wmbej, Wmbje, Zmbij)
+            self.t1 += r1 / Dia
+            self.t2 += r2 / Dijab
+
+            rms = np.einsum('ia,ia->', r1 / Dia, r1 / Dia)
+            rms += np.einsum('ijab,ijab->', r2 / Dijab, r2 / Dijab)
+            rms = np.sqrt(rms)
 
             # Compute CCSD correlation energy
             if self.precision == "mixed":
-                CCSDcorr_E = self.compute_corr_energy(self.F64, self.L64, self.t1, self.t2)
+                CCSDcorr_E = self.compute_corr_energy(self.L64, self.t1, self.t2)
             else:
-                CCSDcorr_E = self.compute_corr_energy(self.F, self.L, self.t1, self.t2)
-#            CCSDcorr_E = self.compute_corr_energy(self.F, self.L, self.t1, self.t2)
+                CCSDcorr_E = self.compute_corr_energy(L, self.t1, self.t2)
 
             # Print CCSD iteration information
             print('CCSD Iter %3d: CCSD Ecorr = %.15f  dE = % .5E  rms = % .5E  DIIS = %d' % (
@@ -356,7 +346,6 @@ class ccEnergy(object):
             if (abs(CCSDcorr_E - CCSDcorr_E_old) < e_conv and rms < r_conv):
                 print('\nCCSD has converged in %.3f seconds!' % (time.time() - ccsd_tstart))
                 return CCSDcorr_E
-                # return t1_init
 
             # Update old energy
             CCSDcorr_E_old = CCSDcorr_E
